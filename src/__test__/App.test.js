@@ -1,5 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import App from "../App";
+import userEvent from "@testing-library/user-event";
+import axios from "axios";
+
+jest.mock("axios");
 
 beforeEach(() => {
   render(<App />);
@@ -32,4 +36,39 @@ test("search text and button text should be in app", () => {
 test("input contains initial value", () => {
   const inputElement = screen.getByTestId("input");
   expect(inputElement).toHaveValue("");
+});
+
+test("input change", () => {
+  const inputElement = screen.getByTestId("input");
+  expect(inputElement).toHaveValue("");
+  userEvent.type(inputElement, "");
+});
+
+test("should display a text before loading data", () => {
+  const loading = screen.getByTestId("loading");
+  expect(loading).toBeInTheDocument("No news....");
+});
+
+test("fetches stories from an API and display them", async () => {
+  const stories = [
+    { objectID: "1", title: "Hello", url: "http" },
+    { objectID: "2", title: "React", url: "http" },
+  ];
+
+  const search = "";
+
+  const promise = Promise.resolve({ data: { hits: stories } });
+  axios.get.mockImplementationOnce(() => promise);
+  await expect(promise).resolves.toEqual({ data: { hits: stories } });
+
+  userEvent.click(
+    screen.getByRole("button", {
+      name: /go to news/i,
+    })
+  );
+  expect(axios.get).toHaveBeenCalledWith(
+    `http://hn.algolia.com/api/v1/search?query=${search}`
+  );
+  const items = await screen.findAllByRole("listitem");
+  expect(items).toHaveLength(2);
 });
